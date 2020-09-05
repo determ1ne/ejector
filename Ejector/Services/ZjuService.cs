@@ -14,9 +14,10 @@ namespace Ejector.Services
     {
         private readonly HttpClientHandler _httpClientHandler;
         private readonly HttpClient _httpClient;
-        private const string _publicKeyUrl = "https://zjuam.zju.edu.cn/cas/v2/getPubKey";
-        private const string _appServiceLoginUrl = "https://zjuam.zju.edu.cn/cas/login?service=http%3A%2F%2Fappservice.zju.edu.cn%2Findex";
-        private const string _appServiceUrl = "http://appservice.zju.edu.cn/index";
+        private const string kPublicKeyUrl = "https://zjuam.zju.edu.cn/cas/v2/getPubKey";
+        private const string kAppServiceLoginUrl = "https://zjuam.zju.edu.cn/cas/login?service=http%3A%2F%2Fappservice.zju.edu.cn%2Findex";
+        private const string kAppServiceGetUserInfo = "http://appservice.zju.edu.cn/zju-smartcampus/zdydjy/stuInfo/getUserInfo";
+        private const string kAppServiceGetExamOutlineInfo = "http://appservice.zju.edu.cn/zju-smartcampus/zdydjw/api/kkqk_cxXsksxx";
 
         public ZjuService(IHttpClientFactory _httpClientFactory)
         {
@@ -40,11 +41,12 @@ namespace Ejector.Services
 
         public async Task<List<string>> Login(string username, string password)
         {
+            // TODO: Make custom exception type
             var cookies = new List<string>();
             
             // STAGE 1
             // Getting the csrf key
-            var loginRes = await _httpClient.GetAsync(_appServiceLoginUrl);
+            var loginRes = await _httpClient.GetAsync(kAppServiceLoginUrl);
             var loginPage = await loginRes.Content.ReadAsStringAsync();
             var executionTag = loginPage.IndexOf("execution\"", StringComparison.Ordinal);
             var executionStart = loginPage.IndexOf('"', executionTag+10)+1;
@@ -59,11 +61,11 @@ namespace Ejector.Services
             
             // STAGE 2
             // Getting the RSA public key
-            var pubKeyReq = new HttpRequestMessage(HttpMethod.Get, _publicKeyUrl);
+            var pubKeyReq = new HttpRequestMessage(HttpMethod.Get, kPublicKeyUrl);
             pubKeyReq.Headers.Add("Cookie", string.Join(' ', cookies));
             var pubKeyMessage = await _httpClient.SendAsync(pubKeyReq);
-            var pubKey = await pubKeyMessage.Content.ReadAsStringAsync();
-            var pubKeyObj = JsonSerializer.Deserialize<ZjuamPubKey>(pubKey);
+            var pubKey = pubKeyMessage.Content.ReadAsStreamAsync();
+            var pubKeyObj = await JsonSerializer.DeserializeAsync<ZjuamPubKey>(await pubKey);
             var modulus = parsePositiveHexBigInteger(pubKeyObj.Modulus);
             var exponent = parsePositiveHexBigInteger(pubKeyObj.Exponent);
             var passwordHex = string.Join("", password.Select(x => Convert.ToInt32(x).ToString("X")));
@@ -77,7 +79,7 @@ namespace Ejector.Services
 
             // STAGE 3
             // Real Log in
-            var readLoginReq = new HttpRequestMessage(HttpMethod.Post, _appServiceLoginUrl);
+            var readLoginReq = new HttpRequestMessage(HttpMethod.Post, kAppServiceLoginUrl);
             readLoginReq.Headers.Add("Cookie", string.Join(' ', cookies));
             readLoginReq.Content = new FormUrlEncodedContent(new[]
             {
@@ -124,7 +126,7 @@ namespace Ejector.Services
 
         public async Task<string> GetStuId(string cookie)
         {
-            var req = new HttpRequestMessage(HttpMethod.Post, "http://appservice.zju.edu.cn/zju-smartcampus/zdydjy/stuInfo/getUserInfo");
+            var req = new HttpRequestMessage(HttpMethod.Post, kAppServiceGetUserInfo);
             req.Headers.Add("Cookie", cookie);
             var res = await _httpClient.SendAsync(req);
             res.EnsureSuccessStatusCode();
@@ -135,7 +137,26 @@ namespace Ejector.Services
         
         public async Task GetClassTimeTable(string cookie, string year, ClassTerm term, string stuId)
         {
+            // TODO: Implementation
             throw new NotImplementedException();
+        }
+
+        public async Task<ZjuExamOutline[]> GetExamInfo(string cookie, string year, ExamTerm term, string stuId)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, kAppServiceGetExamOutlineInfo);
+            req.Headers.Add("Cookie", cookie);
+            req.Content = new FormUrlEncodedContent(new []
+            {
+                new KeyValuePair<string, string>("xh", stuId),
+                new KeyValuePair<string, string>("xn", year),
+                new KeyValuePair<string, string>("xq", term.ToQueryString()) 
+            });
+            var res = await _httpClient.SendAsync(req);
+            res.EnsureSuccessStatusCode();
+            var streamTask = res.Content.ReadAsStreamAsync();
+            var examOutlines =
+                await JsonSerializer.DeserializeAsync<ZjuResWrapper<ZjuExamOutlineRes>>(await streamTask);
+            return examOutlines.Data.ExamOutlineList;
         }
     }
 
@@ -150,11 +171,17 @@ namespace Ejector.Services
         ShortB,
     }
 
-    public static class ClassTermExtension
+    public enum ExamTerm
     {
-        public static string ToQueryString(this ClassTerm c)
+        AutumnWinter,
+        SpringSummer
+    }
+
+    public static class TermExtension
+    {
+        public static string ToQueryString(this ClassTerm t)
         {
-            return c switch
+            return t switch
             {
                 ClassTerm.Autumn => "1|秋",
                 ClassTerm.Winter => "1|冬",
@@ -163,6 +190,16 @@ namespace Ejector.Services
                 ClassTerm.Spring => "2|春",
                 ClassTerm.Summer => "2|夏",
                 ClassTerm.ShortB => "2|短",
+                _ => string.Empty
+            };
+        }
+
+        public static string ToQueryString(this ExamTerm t)
+        {
+            return t switch
+            {
+                ExamTerm.AutumnWinter => "1",
+                ExamTerm.SpringSummer => "0",
                 _ => string.Empty
             };
         }

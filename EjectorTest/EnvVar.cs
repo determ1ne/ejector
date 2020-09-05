@@ -62,7 +62,8 @@ namespace EjectorTest
         {
             if (_envDict == null) init();
             name = name.ToLowerInvariant();
-            _envDict.Add(name, value);
+            if (_envDict.ContainsKey(name)) _envDict[name] = value;
+            else _envDict.Add(name, value);
         }
     }
 }

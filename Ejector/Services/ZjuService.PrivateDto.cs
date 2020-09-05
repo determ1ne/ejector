@@ -17,17 +17,25 @@ namespace Ejector.Services
             [JsonPropertyName("data")]
             public T Data { get; set; }
             [JsonPropertyName("error_code")]           
-            public int ErrorCode { get; set; }
+            public string ErrorCode { get; set; }
             [JsonPropertyName("message")]
             public string Message { get; set; }
 
-            public bool IsSuccess => ErrorCode==0 && Message.Contains("请求成功");
+            public bool IsSuccess => ErrorCode=="0" && Message.Contains("请求成功");
         }
         
         private class ZjuUserInfoRes
         {
             [JsonPropertyName("yhm")]
             public string Id { get; set; }
+            [JsonPropertyName("zt")]
+            public string Zt { get; set; }
+        }
+        
+        private class ZjuExamOutlineRes
+        {
+            [JsonPropertyName("list")]
+            public ZjuExamOutline[] ExamOutlineList { get; set; }
             [JsonPropertyName("zt")]
             public string Zt { get; set; }
         }
