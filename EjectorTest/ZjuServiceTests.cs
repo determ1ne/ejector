@@ -1,14 +1,11 @@
 using System;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Ejector.Services;
-using Microsoft.VisualBasic;
+using Ejector.Utils.Calender;
 
 namespace EjectorTest
 {
@@ -62,7 +59,7 @@ namespace EjectorTest
             _semaphore.Release();
         }
 
-        private void WriteLogToFile(string fileName, string content)
+        private void WriteToFile(string fileName, string content)
         {
             File.WriteAllText($"{TestContext.CurrentContext.WorkDirectory}\\{EnvVar.GetInternalEnv("__testStarted")}{fileName}", content);
         }
@@ -100,13 +97,30 @@ namespace EjectorTest
             if (examOutline != null)
             {
                 var json = JsonSerializer.Serialize(examOutline);
-                WriteLogToFile("ExamOutline.json", json);
+                WriteToFile("ExamOutline.json", json);
                 Assert.Pass();
             }
             else
             {
                 Assert.Fail();
             }
+        }
+
+        [Test]
+        public async Task TestExamCal()
+        {
+            await init();
+            var cookies = EnvVar.GetInternalEnv("__ZjuCookies");
+            var stuid = EnvVar.GetEnv("StuId");
+            var examOutline = await _zjuService.GetExamInfo(cookies, "2020-2021", ExamTerm.AutumnWinter, stuid); 
+            var vCal = new VCalendar();
+            foreach (var zjuExamOutline in examOutline)
+            {
+                var list = zjuExamOutline.ToVEventList();
+                vCal.VEvents.AddRange(list);
+            }
+            WriteToFile("exam.ics", vCal.ToString());
+            Assert.Pass();
         }
     }
 }
