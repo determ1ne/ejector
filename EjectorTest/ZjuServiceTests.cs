@@ -16,7 +16,7 @@ namespace EjectorTest
     {
         private string _username;
         private string _password;
-        private Mutex _mutex;
+        private SemaphoreSlim _semaphore;
         private ZjuService _zjuService;
         
         [SetUp]
@@ -24,12 +24,12 @@ namespace EjectorTest
         {
             _username = EnvVar.GetEnv("Username");
             _password = EnvVar.GetEnv("Password");
-            _mutex = new Mutex();
+            _semaphore = new SemaphoreSlim(1);
         }
 
-        private async Task<string> init()
+        private async Task init()
         {
-            _mutex.WaitOne();
+            await _semaphore.WaitAsync();
             
             // Init zjuservice
             if (_zjuService == null)
@@ -56,10 +56,17 @@ namespace EjectorTest
             if (EnvVar.GetEnv("OverrideStuId") == "false")
                 EnvVar.SetEnv("StuId", EnvVar.GetEnv("UserName"));
             
-            _mutex.ReleaseMutex();
-            return EnvVar.GetInternalEnv("__ZjuCookies");
+            // Init test start time
+            EnvVar.SetEnv("__testStarted", DateTime.Now.ToString("yyyyMMddHHmm"));
+            
+            _semaphore.Release();
         }
 
+        private void WriteLogToFile(string fileName, string content)
+        {
+            File.WriteAllText($"{TestContext.CurrentContext.WorkDirectory}\\{EnvVar.GetInternalEnv("__testStarted")}{fileName}", content);
+        }
+        
         [Test]
         public async Task TestZjuAppServiceCookie()
         {
@@ -67,7 +74,8 @@ namespace EjectorTest
             var cookies = EnvVar.GetInternalEnv("__ZjuCookies");
             if (cookies.IndexOf("wisportalId") is int wi)
                 Assert.Pass($"{cookies.Substring(wi, 16)}****");
-            Assert.Fail();
+            else
+                Assert.Fail();
         }
 
         [Test]
@@ -78,7 +86,8 @@ namespace EjectorTest
             var stuId = await _zjuService.GetStuId(cookies);
             if (stuId != null)
                 Assert.Pass(stuId);
-            Assert.Fail();
+            else
+                Assert.Fail();
         }
 
         [Test]
@@ -90,9 +99,14 @@ namespace EjectorTest
             var examOutline = await _zjuService.GetExamInfo(cookies, "2020-2021", ExamTerm.AutumnWinter, stuid);
             if (examOutline != null)
             {
+                var json = JsonSerializer.Serialize(examOutline);
+                WriteLogToFile("ExamOutline.json", json);
                 Assert.Pass();
             }
-            Assert.Fail();
+            else
+            {
+                Assert.Fail();
+            }
         }
     }
 }

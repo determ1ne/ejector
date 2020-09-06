@@ -12,7 +12,19 @@ namespace Ejector.Services
             public string Exponent { get; set; }
         } 
         
-        private class ZjuResWrapper<T>
+        private class ZjuResWrapperNum<T>
+        {
+            [JsonPropertyName("data")]
+            public T Data { get; set; }
+            [JsonPropertyName("error_code")]           
+            public int ErrorCode { get; set; }
+            [JsonPropertyName("message")]
+            public string Message { get; set; }
+
+            public bool IsSuccess => ErrorCode==0 && Message.Contains("请求成功");
+        }
+        
+        private class ZjuResWrapperStr<T>
         {
             [JsonPropertyName("data")]
             public T Data { get; set; }
@@ -21,7 +33,7 @@ namespace Ejector.Services
             [JsonPropertyName("message")]
             public string Message { get; set; }
 
-            public bool IsSuccess => ErrorCode=="0" && Message.Contains("请求成功");
+            public bool IsSuccess => ErrorCode=="0" && Message.Contains("success");
         }
         
         private class ZjuUserInfoRes

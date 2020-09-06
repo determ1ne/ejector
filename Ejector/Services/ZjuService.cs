@@ -131,7 +131,7 @@ namespace Ejector.Services
             var res = await _httpClient.SendAsync(req);
             res.EnsureSuccessStatusCode();
             var streamTask = res.Content.ReadAsStreamAsync();
-            var userInfo = await JsonSerializer.DeserializeAsync<ZjuResWrapper<ZjuUserInfoRes>>(await streamTask);
+            var userInfo = await JsonSerializer.DeserializeAsync<ZjuResWrapperNum<ZjuUserInfoRes>>(await streamTask);
             return userInfo.Data.Id;
         }
         
@@ -155,7 +155,7 @@ namespace Ejector.Services
             res.EnsureSuccessStatusCode();
             var streamTask = res.Content.ReadAsStreamAsync();
             var examOutlines =
-                await JsonSerializer.DeserializeAsync<ZjuResWrapper<ZjuExamOutlineRes>>(await streamTask);
+                await JsonSerializer.DeserializeAsync<ZjuResWrapperStr<ZjuExamOutlineRes>>(await streamTask);
             return examOutlines.Data.ExamOutlineList;
         }
     }
