@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Numerics;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Ejector.Utils.Calender;
 
 namespace Ejector.Services
 {
@@ -38,6 +39,11 @@ namespace Ejector.Services
         }
         
         private BigInteger parsePositiveHexBigInteger(string num) => BigInteger.Parse(string.Concat("0", num), NumberStyles.HexNumber);
+
+        private List<VEvent> generateClassVEvents(TermInfo termInfo, string tweaks, List<ZjuClass> classList)
+        {
+            throw new NotImplementedException();
+        }
 
         public async Task<List<string>> Login(string username, string password)
         {
@@ -135,7 +141,7 @@ namespace Ejector.Services
             return userInfo.Data.Id;
         }
         
-        public async Task GetClassTimeTable(string cookie, string year, ClassTerm term, string stuId)
+        public async Task<ZjuClass[]> GetClassTimeTable(string cookie, string year, ClassTerm term, string stuId)
         {
             // TODO: Implementation
             throw new NotImplementedException();
@@ -160,48 +166,4 @@ namespace Ejector.Services
         }
     }
 
-    public enum ClassTerm
-    {
-        Autumn,
-        Winter,
-        ShortA,
-        SummerVacation,
-        Spring,
-        Summer,
-        ShortB,
-    }
-
-    public enum ExamTerm
-    {
-        AutumnWinter,
-        SpringSummer
-    }
-
-    public static class TermExtension
-    {
-        public static string ToQueryString(this ClassTerm t)
-        {
-            return t switch
-            {
-                ClassTerm.Autumn => "1|秋",
-                ClassTerm.Winter => "1|冬",
-                ClassTerm.ShortA => "1|短",
-                ClassTerm.SummerVacation => "1|暑",
-                ClassTerm.Spring => "2|春",
-                ClassTerm.Summer => "2|夏",
-                ClassTerm.ShortB => "2|短",
-                _ => string.Empty
-            };
-        }
-
-        public static string ToQueryString(this ExamTerm t)
-        {
-            return t switch
-            {
-                ExamTerm.AutumnWinter => "1",
-                ExamTerm.SpringSummer => "0",
-                _ => string.Empty
-            };
-        }
-    }
 }
