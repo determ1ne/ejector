@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
 using System.Text.Json.Serialization;
 using Ejector.Utils.Calender;
 
 namespace Ejector.Services
 {
-    public enum ClassTerm
+    public enum ClassTerm : int
     {
         Autumn,
         Winter,
@@ -16,7 +18,7 @@ namespace Ejector.Services
         ShortB,
     }
 
-    public enum ExamTerm
+    public enum ExamTerm : int
     {
         AutumnWinter,
         SpringSummer
@@ -46,6 +48,21 @@ namespace Ejector.Services
             };
         }
 
+        public static string ToDescriptionString(this ClassTerm t)
+        {
+            return t switch
+            {
+                ClassTerm.Autumn => "秋",
+                ClassTerm.Winter => "冬",
+                ClassTerm.ShortA => "短",
+                ClassTerm.SummerVacation => "暑",
+                ClassTerm.Spring => "春",
+                ClassTerm.Summer => "夏",
+                ClassTerm.ShortB => "短",
+                _ => string.Empty
+            };
+        }
+
         public static string ToQueryString(this ExamTerm t)
         {
             return t switch
@@ -59,10 +76,10 @@ namespace Ejector.Services
 
     public struct ClassPeriod
     {
-        private readonly short Hour;
-        private readonly short Minute;
+        private readonly int Hour;
+        private readonly int Minute;
 
-        public ClassPeriod(short PeriodNumber)
+        public ClassPeriod(int PeriodNumber)
         {
             switch (PeriodNumber)
             {
@@ -180,8 +197,31 @@ namespace Ejector.Services
         {
             TermArrangements = new List<ClassTerm>();
         }
+
+        public DateTime GetStartDateTime(DateTime day)
+            => new ClassPeriod(StartPeriod).ToStartDateTime(day);
+        
+        public DateTime GetEndDateTime(DateTime day)
+            => new ClassPeriod(EndPeriod).ToEndDateTime(day);
+
+        public string ArrangementDescription()
+        {
+            var sb = new StringBuilder();
+            TermArrangements.Sort();
+            foreach (var term in TermArrangements)
+                sb.Append(term.ToDescriptionString());
+
+            sb.Append(" ");
+            if (StartPeriod != EndPeriod)
+                sb.Append($"第{StartPeriod}节");
+            else
+                sb.Append($"第{StartPeriod}-{EndPeriod}节");
+            
+            return sb.ToString();
+        }
     }
 
+    [DebuggerDisplay("{Year}-{Month}-{Day}")]
     public struct Date
     {
         public readonly int Year;
@@ -190,6 +230,8 @@ namespace Ejector.Services
 
         public Date(int year, int month, int day)
         {
+            // Internal Type
+            // No checking data
             Year = year;
             Month = month;
             Day = day;
@@ -201,6 +243,11 @@ namespace Ejector.Services
             Month = d.Month;
             Day = d.Day;
         }
+        
+        public int ToInt32()
+        {
+            return (Year * 100 + Month) * 100 + Day;
+        }
 
         public DateTime ToDateTime()
         {
@@ -210,6 +257,11 @@ namespace Ejector.Services
         public Date NextDayDate()
         {
             return new Date(ToDateTime().AddDays(1));
+        }
+
+        public static Date Parse(int i)
+        {
+            return new Date(i / 10000, i / 100 % 100, i % 100);
         }
         
         public override bool Equals(object? obj)
@@ -223,12 +275,84 @@ namespace Ejector.Services
         {
             return Year * 10000 + Month * 100 + Day;
         }
+
+        public static bool operator ==(Date lhs, Date rhs)
+        {
+            return lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(Date lhs, Date rhs)
+        {
+            return !(lhs.Equals(rhs));
+        }
+
+        public static bool operator >(Date lhs, Date rhs)
+        {
+            if (lhs.Year != rhs.Year)
+                return lhs.Year > rhs.Year;
+            if (lhs.Month != rhs.Month)
+                return lhs.Month > rhs.Month;
+            return lhs.Day > rhs.Day;
+        }
+
+        public static bool operator <(Date lhs, Date rhs)
+        {
+            return rhs > lhs;
+        }
+
+        public static bool operator <=(Date lhs, Date rhs)
+        {
+            return lhs < rhs || lhs == rhs;
+        }
+
+        public static bool operator >=(Date lhs, Date rhs)
+        {
+            return lhs > rhs || lhs == rhs;
+        }
+
+        public static Date operator ++(Date d)
+        {
+            return d.NextDayDate();
+        }
     }
     
-    public class TermInfo
+    public struct ClassParseSettings
     {
-        public ClassTerm term;
-        public Date StartDate;
-        public Date EndDate;
+        public int Id { get; set; }
+        public int Year { get; set; }
+        public ClassTerm Term { get; set; }
+    }
+
+    public struct ExamParseSettings
+    {
+        public int Id { get; set; }
+        public int Year { get; set; }
+        public ExamTerm Term { get; set; }
+    }
+
+    public struct TermConfig
+    {
+        public int Id { get; set; }
+        public int Year { get; set; }
+        public ClassTerm Term { get; set; }
+        public Date Begin { get; set; }
+        public Date End { get; set; }
+        public int FirstWeekNo { get; set; }
+    }
+
+    public enum TweakType : int 
+    {
+        Clear,
+        Copy,
+        Exchange
+    }
+
+    public struct Tweak
+    {
+        public int Id { get; set; }
+        public TweakType TweakType { get; set; }
+        public string Description { get; set; }
+        public Date From { get; set; }
+        public Date To { get; set; }
     }
 }

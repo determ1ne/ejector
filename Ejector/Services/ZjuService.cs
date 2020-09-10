@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -7,29 +8,27 @@ using System.Net.Http;
 using System.Numerics;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Dapper;
 using Ejector.Utils.Calender;
 
 namespace Ejector.Services
 {
-    public partial class ZjuService : IDisposable
+    public partial class ZjuService : IZjuService, IDisposable
     {
         private readonly HttpClientHandler _httpClientHandler;
         private readonly HttpClient _httpClient;
+        private readonly ISqlService _sqlService;
         private const string kPublicKeyUrl = "https://zjuam.zju.edu.cn/cas/v2/getPubKey";
         private const string kAppServiceLoginUrl = "https://zjuam.zju.edu.cn/cas/login?service=http%3A%2F%2Fappservice.zju.edu.cn%2Findex";
         private const string kAppServiceGetUserInfo = "http://appservice.zju.edu.cn/zju-smartcampus/zdydjy/stuInfo/getUserInfo";
         private const string kAppServiceGetExamOutlineInfo = "http://appservice.zju.edu.cn/zju-smartcampus/zdydjw/api/kkqk_cxXsksxx";
+        private const string kAppServiceGetWeekClassInfo = "http://appservice.zju.edu.cn/zju-smartcampus/zdydjw/api/kbdy_cxXsZKbxx";
 
-        public ZjuService(IHttpClientFactory _httpClientFactory)
+        public ZjuService(IHttpClientFactory httpClientFactory, ISqlService sqlService)
         {
-            _httpClientHandler = new HttpClientHandler
-            {
-                AllowAutoRedirect = true,
-                MaxAutomaticRedirections = 10,
-                UseCookies = true
-            };
-            _httpClient = _httpClientFactory.CreateClient();
+            _httpClient = httpClientFactory.CreateClient();
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36 Edg/85.0.564.41");
+            _sqlService = sqlService;
         }
 
         public void Dispose()
@@ -40,12 +39,7 @@ namespace Ejector.Services
         
         private BigInteger parsePositiveHexBigInteger(string num) => BigInteger.Parse(string.Concat("0", num), NumberStyles.HexNumber);
 
-        private List<VEvent> generateClassVEvents(TermInfo termInfo, string tweaks, List<ZjuClass> classList)
-        {
-            throw new NotImplementedException();
-        }
-
-        public async Task<List<string>> Login(string username, string password)
+        public async Task<List<string>> LoginAsync(string username, string password)
         {
             // TODO: Make custom exception type
             var cookies = new List<string>();
@@ -130,7 +124,7 @@ namespace Ejector.Services
             return cookies;
         }
 
-        public async Task<string> GetStuId(string cookie)
+        public async Task<string> GetStuIdAsync(string cookie)
         {
             var req = new HttpRequestMessage(HttpMethod.Post, kAppServiceGetUserInfo);
             req.Headers.Add("Cookie", cookie);
@@ -141,20 +135,33 @@ namespace Ejector.Services
             return userInfo.Data.Id;
         }
         
-        public async Task<ZjuClass[]> GetClassTimeTable(string cookie, string year, ClassTerm term, string stuId)
+        public async Task<ZjuClass[]> GetClassTimeTableAsync(string cookie, string academicYear, ClassTerm term, string stuId)
         {
-            // TODO: Implementation
-            throw new NotImplementedException();
-        }
+            var req = new HttpRequestMessage(HttpMethod.Post, kAppServiceGetWeekClassInfo);
+            req.Headers.Add("Cookie", cookie);
+            req.Content = new FormUrlEncodedContent(new []
+            {
+                new KeyValuePair<string, string>("xn", academicYear), 
+                new KeyValuePair<string, string>("xq", term.ToQueryString()),
+                new KeyValuePair<string, string>("xh", stuId), 
+            });
+            var res = await _httpClient.SendAsync(req);
+            res.EnsureSuccessStatusCode();
+            var streamTask = res.Content.ReadAsStreamAsync();
+            var classTimeTable =
+                await JsonSerializer.DeserializeAsync<ZjuResWrapperStr<ZjuWeeklyScheduleRes>>(await streamTask);
 
-        public async Task<ZjuExamOutline[]> GetExamInfo(string cookie, string year, ExamTerm term, string stuId)
+            return classTimeTable.Data.ClassList.Select(x => x.ToZjuClass()).Where(x => x!=null).ToArray();
+        }
+        
+        public async Task<ZjuExamOutline[]> GetExamInfoAsync(string cookie, string academicYear, ExamTerm term, string stuId)
         {
             var req = new HttpRequestMessage(HttpMethod.Post, kAppServiceGetExamOutlineInfo);
             req.Headers.Add("Cookie", cookie);
             req.Content = new FormUrlEncodedContent(new []
             {
                 new KeyValuePair<string, string>("xh", stuId),
-                new KeyValuePair<string, string>("xn", year),
+                new KeyValuePair<string, string>("xn", academicYear),
                 new KeyValuePair<string, string>("xq", term.ToQueryString()) 
             });
             var res = await _httpClient.SendAsync(req);
@@ -163,6 +170,18 @@ namespace Ejector.Services
             var examOutlines =
                 await JsonSerializer.DeserializeAsync<ZjuResWrapperStr<ZjuExamOutlineRes>>(await streamTask);
             return examOutlines.Data.ExamOutlineList;
+        }
+
+        public async Task<TermConfig[]> GetTermConfigsAsync()
+        {
+            using var db = _sqlService.GetSqlConnection();
+            return (await db.QueryAsync<TermConfig>("SELECT * FROM TermConfig")).ToArray();
+        }
+
+        public async Task<Tweak[]> GetTweaksAsync()
+        {
+            using var db = _sqlService.GetSqlConnection();
+            return (await db.QueryAsync<Tweak>("SELECT * FROM Tweak")).ToArray();
         }
     }
 

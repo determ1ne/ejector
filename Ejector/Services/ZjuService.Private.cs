@@ -78,7 +78,7 @@ namespace Ejector.Services
             public string ClassLocation { get; set; }
             [JsonPropertyName("xq")]
             public string TermArrangement { get; set; }
-            [JsonPropertyName("xjq")]
+            [JsonPropertyName("xqj")]
             public int DayNumber { get; set; }
             [JsonPropertyName("sfqd")]
             public int IsConfirmed { get; set; }

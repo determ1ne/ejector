@@ -1,4 +1,6 @@
 using System.Net.Http;
+using Dapper;
+using Ejector.Utils.Calender;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -32,6 +34,9 @@ namespace Ejector
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            
+            SqlMapper.AddTypeHandler(new DateHandler());
+            
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();

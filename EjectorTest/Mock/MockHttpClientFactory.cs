@@ -1,6 +1,7 @@
+using System.IO;
 using System.Net.Http;
 
-namespace EjectorTest
+namespace EjectorTest.Mock
 {
     internal class MockHttpClientFactory : IHttpClientFactory
     {
