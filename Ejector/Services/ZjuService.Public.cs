@@ -212,7 +212,7 @@ namespace Ejector.Services
                 sb.Append(term.ToDescriptionString());
 
             sb.Append(" ");
-            if (StartPeriod != EndPeriod)
+            if (StartPeriod == EndPeriod)
                 sb.Append($"第{StartPeriod}节");
             else
                 sb.Append($"第{StartPeriod}-{EndPeriod}节");
