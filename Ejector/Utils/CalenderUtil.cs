@@ -82,6 +82,8 @@ namespace Ejector.Utils.Calender
                 shadowDates.Add(currentDate, currentDate);
             foreach (var tweak in tweaks)
             {
+                if (tweak.To < termConfig.Begin || tweak.To > termConfig.End)
+                    continue;
                 switch (tweak.TweakType)
                 {
                     case TweakType.Clear:
