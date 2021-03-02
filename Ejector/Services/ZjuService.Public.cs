@@ -69,7 +69,7 @@ namespace Ejector.Services
             return t switch
             {
                 ExamTerm.AutumnWinter => "1",
-                ExamTerm.SpringSummer => "0",
+                ExamTerm.SpringSummer => "2",
                 _ => string.Empty
             };
         }
@@ -334,7 +334,7 @@ namespace Ejector.Services
     public struct TermConfig
     {
         public int Id { get; set; }
-        public int Year { get; set; }
+        public string Year { get; set; }
         public ClassTerm Term { get; set; }
         public Date Begin { get; set; }
         public Date End { get; set; }
@@ -343,7 +343,7 @@ namespace Ejector.Services
 
     public struct TermConfigJson
     {
-        public int Year { get; set; }
+        public string Year { get; set; }
         public int Term { get; set; }
         public int Begin { get; set; }
         public int End { get; set; }
@@ -404,16 +404,26 @@ namespace Ejector.Services
         public TweakJson[] Tweaks { get; set; }
         [JsonPropertyName("termConfigs")]
         public TermConfigJson[] TermConfigs { get; set; }
-        [JsonPropertyName("yearTerms")]
-        public string[] YearTerms { get; set; }
+        [JsonPropertyName("classTerms")]
+        public string[] ClassTerms { get; set; }
+        [JsonPropertyName("examTerms")]
+        public string[] ExamTerms { get; set; }
 
-        public IEnumerable<(string, ClassTerm)> GetYearAndTerms()
+        public IEnumerable<(string, ClassTerm)> GetClassYearAndTerms()
         {
-            return YearTerms.Select(x =>
+            return ClassTerms.Select(x =>
             {
                 var p = x.Split(':');
                 return (p[0], (ClassTerm) int.Parse(p[1]));
             });
         }
-    }
+         public IEnumerable<(string, ExamTerm)> GetExamYearAndTerms()
+         {
+             return ExamTerms.Select(x =>
+             {
+                 var p = x.Split(':');
+                 return (p[0], (ExamTerm) int.Parse(p[1]));
+             });
+         }
+     }
 }

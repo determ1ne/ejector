@@ -186,7 +186,12 @@ namespace Ejector.Services
 
         public async Task<(string, ClassTerm)[]> GetClassTermsAsync()
         {
-            return _schedule.GetYearAndTerms().ToArray();
+            return _schedule.GetClassYearAndTerms().ToArray();
+        }
+        
+        public async Task<(string, ExamTerm)[]> GetExamTermsAsync()
+        {
+            return _schedule.GetExamYearAndTerms().ToArray();
         }
 
         public async Task<bool> UpdateConfigAsync()

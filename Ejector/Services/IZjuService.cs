@@ -12,6 +12,7 @@ namespace Ejector.Services
         Task<TermConfig[]> GetTermConfigsAsync();
         Task<Tweak[]> GetTweaksAsync();
         Task<(string, ClassTerm)[]> GetClassTermsAsync();
+        Task<(string, ExamTerm)[]> GetExamTermsAsync();
         Task<bool> UpdateConfigAsync();
     }
 }

@@ -47,10 +47,10 @@ namespace EjectorTest.Mock
 
             var termConfigs = new List<TermConfig>(new []
             {
-                new TermConfig { Year=2020, Term=ClassTerm.Autumn, Begin=Date.Parse(20200914), End=Date.Parse(20201115), FirstWeekNo = 1}, 
-                new TermConfig { Year=2020, Term=ClassTerm.Winter, Begin=Date.Parse(20201123), End=Date.Parse(20210119), FirstWeekNo = 1}, 
-                new TermConfig { Year=2020, Term=ClassTerm.Spring, Begin=Date.Parse(20210301), End=Date.Parse(20210426), FirstWeekNo = 1}, 
-                new TermConfig { Year=2020, Term=ClassTerm.Summer, Begin=Date.Parse(20210503), End=Date.Parse(20210629), FirstWeekNo = 1}, 
+                new TermConfig { Year="2020-2021", Term=ClassTerm.Autumn, Begin=Date.Parse(20200914), End=Date.Parse(20201115), FirstWeekNo = 1}, 
+                new TermConfig { Year="2020-2021", Term=ClassTerm.Winter, Begin=Date.Parse(20201123), End=Date.Parse(20210119), FirstWeekNo = 1}, 
+                new TermConfig { Year="2020-2021", Term=ClassTerm.Spring, Begin=Date.Parse(20210301), End=Date.Parse(20210426), FirstWeekNo = 1}, 
+                new TermConfig { Year="2020-2021", Term=ClassTerm.Summer, Begin=Date.Parse(20210503), End=Date.Parse(20210629), FirstWeekNo = 1}, 
             });
             var tweaks = new List<Tweak>(new[]
             {
