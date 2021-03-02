@@ -1,5 +1,7 @@
+using System.Net;
 using System.Net.Http;
 using Dapper;
+using Ejector.Services;
 using Ejector.Utils.Calender;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -11,12 +13,13 @@ namespace Ejector
 {
     public class Startup
     {
+        private readonly IConfiguration _configuration;
+        
         public Startup(IConfiguration configuration)
         {
-            Configuration = configuration;
+            _configuration = configuration;
         }
 
-        public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -26,23 +29,19 @@ namespace Ejector
                 {
                     AllowAutoRedirect = false,
                     MaxAutomaticRedirections = 10,
-                    UseCookies = false
+                    UseCookies = false,
                 });
             services.AddControllers();
+            services.AddTransient<IZjuService, ZjuService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            
-            SqlMapper.AddTypeHandler(new DateHandler());
-            
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
-
-            app.UseHttpsRedirection();
 
             app.UseRouting();
 

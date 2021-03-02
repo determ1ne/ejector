@@ -7,8 +7,7 @@ using System.Threading.Tasks;
 using Ejector.Services;
 using Ejector.Utils.Calender;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using StackExchange.Redis;
+using Microsoft.Extensions.Configuration;
 
 namespace Ejector.Controllers
 {
@@ -19,66 +18,43 @@ namespace Ejector.Controllers
 
         private readonly IZjuService _zjuService;
         // TODO: Substitute IRedisService with specific services
-        private readonly IRedisService _redisService;
+        private readonly IConfiguration _config;
         
-        public CalendarController(IZjuService zjuService, IRedisService redisService)
+        public CalendarController(IZjuService zjuService, IConfiguration config)
         {
             _zjuService = zjuService;
-            _redisService = redisService;
+            _config = config;
         }
 
         [HttpGet("getClass")]
-        public async Task<IActionResult> GetClassCalendarFile(string username, string password)
+        public async Task<IActionResult> GetClassCalendarFile(string secret)
         {
-            var redisDb = _redisService.GetRedisDb();
-            MemoryStream stream;
-            
-            // TODO: 
-            // 建用户的时候就应该绑定学号
-            // 直接保存在数据库里
-            // 这个 endpoint 的 username 是多余的
-            // 先充个数
-            var stuId = username;
-            
-            // No parallel request
-            // Note: You may also add freq limit in nginx
-            if (await redisDb.StringIncrementAsync($"{stuId}_fetching_state") != 1)
-                return BadRequest();
-            var calCache = await redisDb.StringGetAsync($"{stuId}_class_cal");
-            if (calCache != RedisValue.Null)
+            var kSecret = _config["SECRET"];
+            if (secret != kSecret)
             {
-                stream = new MemoryStream(Encoding.UTF8.GetBytes(calCache));
-                return File(stream, "text/calendar");
+                return NotFound();
             }
             
-
-            // TODO: use token instead of username and password
-            // 可能还要做一个 service
+            var username = _config["USERNAME"];
+            var password = _config["PASSWORD"];
+            MemoryStream stream;
+            
             var cookieList = await _zjuService.LoginAsync(username, password);
             var cookies = string.Join(' ', cookieList);
-            
-            // TODO: termConfig 和 tweaks 不常发生变动
-            // 考虑一下常驻内存 & SQL 中只获取当前学期的信息
+
+            await _zjuService.UpdateConfigAsync();
             var termConfigs = await _zjuService.GetTermConfigsAsync();
             var tweaks = await _zjuService.GetTweaksAsync();
             
             var vCal = new VCalendar();
 
-            // TODO: 这个应该放进 SQL 的系统设置里
-            // 所有不涉及初始化的都放进 SQL 里
-            // 还可以做缓存（另一个 service）
-            // Exception 处理要做好
-            var currentAcademicYear = "2020-2021";
-            var currentTermList = new List<ClassTerm>();
-            foreach (var classTerm in currentTermList)
+            foreach (var (year, term) in await _zjuService.GetClassTermsAsync())
             {
-                var classes = await _zjuService.GetClassTimeTableAsync(cookies, currentAcademicYear, classTerm, stuId);
-                vCal.VEvents.AddRange(ZjuClassCalendarParser.ClassToVEvents(classes, termConfigs.First(x => x.Term == classTerm), tweaks));
+                var classOutline = await _zjuService.GetClassTimeTableAsync(cookies, year, term, username);
+                vCal.VEvents.AddRange(ZjuClassCalendarParser.ClassToVEvents(classOutline, termConfigs.First(x => x.Term == term), tweaks));
             }
 
             var cal = vCal.ToString();
-            await redisDb.StringSetAsync($"{stuId}_class_cal", cal);
-            await redisDb.KeyDeleteAsync($"{stuId}_fetching_state");
             stream = new MemoryStream(Encoding.UTF8.GetBytes(cal));
             return File(stream, "text/calendar");
         }

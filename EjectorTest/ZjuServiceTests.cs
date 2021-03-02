@@ -35,7 +35,8 @@ namespace EjectorTest
             {
                 var mockFactory = new MockHttpClientFactory();
                 var mockSqlService = new MockSqlService($"{TestContext.CurrentContext.WorkDirectory}\\test.db");
-                _zjuService = new ZjuService(mockFactory, mockSqlService);
+                var mockConfig = new MockConfiguration();
+                _zjuService = new ZjuService(mockFactory, mockConfig);
             }
             
             // Init cookie
@@ -171,6 +172,17 @@ namespace EjectorTest
             
             WriteToFile("class.ics", vCal.ToString());
             Assert.Pass();
+        }
+
+        [Test]
+        public void TestValue()
+        {
+            var schedule = new ZjuScheduleConfig();
+            var termconfigJson = new TermConfigJson();
+            var tweak = new TweakJson();
+            schedule.TermConfigs = new[] {termconfigJson};
+            schedule.Tweaks = new[] {tweak};
+            Console.WriteLine(JsonSerializer.Serialize(schedule));
         }
     }
 }

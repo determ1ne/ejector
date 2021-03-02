@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using Ejector.Utils.Calender;
@@ -340,6 +341,27 @@ namespace Ejector.Services
         public int FirstWeekNo { get; set; }
     }
 
+    public struct TermConfigJson
+    {
+        public int Year { get; set; }
+        public int Term { get; set; }
+        public int Begin { get; set; }
+        public int End { get; set; }
+        public int FirstWeekNo { get; set; }
+
+        public TermConfig ToTermConfig()
+        {
+            return new TermConfig
+            {
+                Year = Year,
+                Term = (ClassTerm)Term,
+                Begin = Date.Parse(Begin),
+                End = Date.Parse(End),
+                FirstWeekNo = FirstWeekNo,
+            };
+        }
+    }
+
     public enum TweakType : int 
     {
         Clear,
@@ -354,5 +376,44 @@ namespace Ejector.Services
         public string Description { get; set; }
         public Date From { get; set; }
         public Date To { get; set; }
+    }
+
+    public struct TweakJson
+    {
+        public int TweakType { get; set; }
+        public string Description { get; set; }
+        public int From { get; set; }
+        public int To { get; set; }
+
+        public Tweak ToTweak()
+        {
+            return new Tweak
+            {
+                TweakType = (TweakType) TweakType,
+                Description = Description,
+                From = Date.Parse(From),
+                To = Date.Parse(To),
+            };
+        }
+    }
+    public class ZjuScheduleConfig
+    {
+        [JsonPropertyName("lastUpdated")]
+        public int LastUpdated { get; set; }
+        [JsonPropertyName("tweaks")]
+        public TweakJson[] Tweaks { get; set; }
+        [JsonPropertyName("termConfigs")]
+        public TermConfigJson[] TermConfigs { get; set; }
+        [JsonPropertyName("yearTerms")]
+        public string[] YearTerms { get; set; }
+
+        public IEnumerable<(string, ClassTerm)> GetYearAndTerms()
+        {
+            return YearTerms.Select(x =>
+            {
+                var p = x.Split(':');
+                return (p[0], (ClassTerm) int.Parse(p[1]));
+            });
+        }
     }
 }

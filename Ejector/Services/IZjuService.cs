@@ -11,5 +11,7 @@ namespace Ejector.Services
         Task<ZjuExamOutline[]> GetExamInfoAsync(string cookie, string academicYear, ExamTerm term, string stuId);
         Task<TermConfig[]> GetTermConfigsAsync();
         Task<Tweak[]> GetTweaksAsync();
+        Task<(string, ClassTerm)[]> GetClassTermsAsync();
+        Task<bool> UpdateConfigAsync();
     }
 }

@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Dapper;
 using Ejector.Utils.Calender;
+using Microsoft.Extensions.Configuration;
 
 namespace Ejector.Services
 {
@@ -17,18 +18,19 @@ namespace Ejector.Services
     {
         private readonly HttpClientHandler _httpClientHandler;
         private readonly HttpClient _httpClient;
-        private readonly ISqlService _sqlService;
+        private readonly IConfiguration _config;
         private const string kPublicKeyUrl = "https://zjuam.zju.edu.cn/cas/v2/getPubKey";
         private const string kAppServiceLoginUrl = "https://zjuam.zju.edu.cn/cas/login?service=http%3A%2F%2Fappservice.zju.edu.cn%2Findex";
         private const string kAppServiceGetUserInfo = "http://appservice.zju.edu.cn/zju-smartcampus/zdydjy/stuInfo/getUserInfo";
         private const string kAppServiceGetExamOutlineInfo = "http://appservice.zju.edu.cn/zju-smartcampus/zdydjw/api/kkqk_cxXsksxx";
         private const string kAppServiceGetWeekClassInfo = "http://appservice.zju.edu.cn/zju-smartcampus/zdydjw/api/kbdy_cxXsZKbxx";
+        private ZjuScheduleConfig _schedule;
 
-        public ZjuService(IHttpClientFactory httpClientFactory, ISqlService sqlService)
+        public ZjuService(IHttpClientFactory httpClientFactory, IConfiguration config)
         {
-            _httpClient = httpClientFactory.CreateClient();
+            _httpClient = httpClientFactory.CreateClient("ZjuClient");
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36 Edg/85.0.564.41");
-            _sqlService = sqlService;
+            _config = config;
         }
 
         public void Dispose()
@@ -174,14 +176,27 @@ namespace Ejector.Services
 
         public async Task<TermConfig[]> GetTermConfigsAsync()
         {
-            using var db = _sqlService.GetSqlConnection();
-            return (await db.QueryAsync<TermConfig>("SELECT * FROM TermConfig")).ToArray();
+            return _schedule.TermConfigs.Select(x => x.ToTermConfig()).ToArray();
         }
 
         public async Task<Tweak[]> GetTweaksAsync()
         {
-            using var db = _sqlService.GetSqlConnection();
-            return (await db.QueryAsync<Tweak>("SELECT * FROM Tweak")).ToArray();
+            return _schedule.Tweaks.Select(x => x.ToTweak()).ToArray();
+        }
+
+        public async Task<(string, ClassTerm)[]> GetClassTermsAsync()
+        {
+            return _schedule.GetYearAndTerms().ToArray();
+        }
+
+        public async Task<bool> UpdateConfigAsync()
+        {
+            var req = new HttpRequestMessage(HttpMethod.Get, _config["CONFIG_URL"]);
+            var res = await _httpClient.SendAsync(req);
+            res.EnsureSuccessStatusCode();
+            var streamTask = res.Content.ReadAsStreamAsync();
+            _schedule = await JsonSerializer.DeserializeAsync<ZjuScheduleConfig>(await streamTask);
+            return true;
         }
     }
 
