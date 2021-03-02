@@ -32,6 +32,7 @@ namespace Ejector
                     UseCookies = false,
                 });
             services.AddControllers();
+            services.AddSingleton<NaiveCache>();
             services.AddTransient<IZjuService, ZjuService>();
         }
 

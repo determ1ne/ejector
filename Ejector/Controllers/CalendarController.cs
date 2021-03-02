@@ -19,11 +19,13 @@ namespace Ejector.Controllers
         private readonly IZjuService _zjuService;
         // TODO: Substitute IRedisService with specific services
         private readonly IConfiguration _config;
+        private readonly NaiveCache _cache;
         
-        public CalendarController(IZjuService zjuService, IConfiguration config)
+        public CalendarController(IZjuService zjuService, IConfiguration config, NaiveCache cache)
         {
             _zjuService = zjuService;
             _config = config;
+            _cache = cache;
         }
 
         [HttpGet("getClass")]
@@ -46,7 +48,10 @@ namespace Ejector.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode(503);
+                var cachedResult = _cache.Get("class");
+                if (cachedResult == null) return StatusCode(503);
+                var cachedVCal = (VCalendar) cachedResult;
+                return File(new MemoryStream(Encoding.UTF8.GetBytes(cachedVCal.ToString("Ejector 课程表 (刷新失败)"))), "text/calendar");
             }
             var cookies = string.Join(' ', cookieList);
 
@@ -62,6 +67,7 @@ namespace Ejector.Controllers
                 vCal.VEvents.AddRange(ZjuClassCalendarParser.ClassToVEvents(classOutline, termConfigs.First(x => x.Term == term && x.Year == year), tweaks));
             }
 
+            _cache.Set("class", vCal);
             var cal = vCal.ToString();
             stream = new MemoryStream(Encoding.UTF8.GetBytes(cal));
             return File(stream, "text/calendar");
@@ -87,7 +93,10 @@ namespace Ejector.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode(503);
+                var cachedResult = _cache.Get("exam");
+                if (cachedResult == null) return StatusCode(503);
+                var cachedVCal = (VCalendar) cachedResult;
+                return File(new MemoryStream(Encoding.UTF8.GetBytes(cachedVCal.ToString("Ejector 考试安排 (刷新失败)"))), "text/calendar");
             }
             var cookies = string.Join(' ', cookieList);
 
@@ -105,6 +114,7 @@ namespace Ejector.Controllers
                 }
             }
 
+            _cache.Set("exam", vCal);
             var cal = vCal.ToString("Ejector 考试安排");
             stream = new MemoryStream(Encoding.UTF8.GetBytes(cal));
             return File(stream, "text/calendar");
