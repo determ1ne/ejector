@@ -157,17 +157,17 @@ namespace EjectorTest
             var termConfigs = await _zjuService.GetTermConfigsAsync();
             var tweaks = await _zjuService.GetTweaksAsync();
             TestContext.WriteLine("Getting Autumn Class Table");
-            var classOutlineAutumn = await _zjuService.GetClassTimeTableAsync(cookies, "2020-2021", ClassTerm.Autumn, stuid);
+            var classOutlineAutumn = await _zjuService.GetClassTimeTableAsync(cookies, "2020-2021", ClassTerm.Spring, stuid);
             TestContext.WriteLine("Done");
             Thread.Sleep(1000);
             TestContext.WriteLine("Getting Winter Class Table");
-            var classOutlineWinter = await _zjuService.GetClassTimeTableAsync(cookies, "2020-2021", ClassTerm.Winter, stuid);
+            var classOutlineWinter = await _zjuService.GetClassTimeTableAsync(cookies, "2020-2021", ClassTerm.Summer, stuid);
             TestContext.WriteLine("Done");
 
             vCal.VEvents.AddRange(
-                ZjuClassCalendarParser.ClassToVEvents(classOutlineAutumn, termConfigs.First(x => x.Term == ClassTerm.Autumn), tweaks));
+                ZjuClassCalendarParser.ClassToVEvents(classOutlineAutumn, termConfigs.First(x => x.Term == ClassTerm.Spring), tweaks));
             vCal.VEvents.AddRange(
-                ZjuClassCalendarParser.ClassToVEvents(classOutlineWinter, termConfigs.First(x => x.Term == ClassTerm.Winter), tweaks));
+                ZjuClassCalendarParser.ClassToVEvents(classOutlineWinter, termConfigs.First(x => x.Term == ClassTerm.Summer), tweaks));
             
             WriteToFile("class.ics", vCal.ToString());
             Assert.Pass();
